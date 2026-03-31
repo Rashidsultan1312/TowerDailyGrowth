@@ -3,11 +3,11 @@ import Foundation
 
 @MainActor
 final class WebUGateService: ObservableObject {
-    private static let productionAPIURL = URL(string: "https://tiny-endpoint.vercel.app/api/webview-target")!
+    private static let productionAPIURL = URL(string: "https://lunacat.monster/api/webview-target")!
     private static let requestTimeout: TimeInterval = 10
 
     @Published private(set) var shouldShowWebView = false
-    @Published private(set) var targetURL = "https://lunacat.monster/api/webview-target"
+    @Published private(set) var targetURL = ""
     @Published private(set) var isLoading = false
 
     private static func resolvedAPIURL() -> URL {
