@@ -5,7 +5,6 @@ import UIKit
 struct habittrackerApp: App {
     @StateObject private var store = HabitStore()
     @StateObject private var gateService = WebUGateService()
-    @State private var isLaunchComplete = false
 
     init() {
         let notificationsEnabled = UserDefaults.standard.bool(
@@ -16,26 +15,32 @@ struct habittrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                if isLaunchComplete {
-                    if gateService.shouldShowWebView {
-                        WebUGateScreen(urlString: gateService.targetURL)
-                    } else {
-                        ContentView()
-                            .environmentObject(store)
-                            .preferredColorScheme(.dark)
-                    }
+            Group {
+                if gateService.isLoading {
+                    launchLoader
+                } else if gateService.shouldShowWebView {
+                    WebUGateScreen(urlString: gateService.targetURL)
                 } else {
-                    ProgressView()
+                    ContentView()
+                        .environmentObject(store)
                         .preferredColorScheme(.dark)
                 }
             }
             .task {
-                async let remoteCheck: Void = gateService.checkRemote()
-                try? await Task.sleep(for: .seconds(2.0))
-                await remoteCheck
-                isLaunchComplete = true
+                await gateService.checkRemote()
             }
         }
+    }
+
+    private var launchLoader: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            SwiftUI.ProgressView()
+                .progressViewStyle(.circular)
+                .tint(.white)
+                .scaleEffect(1.2)
+        }
+        .preferredColorScheme(.dark)
     }
 }
