@@ -34,17 +34,26 @@ workflows:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$CM_BUILD_DIR/DerivedData" \
+            -resultBundlePath /tmp/xcodebuild_logs/habittracker.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             ARCHS=arm64 \
             ONLY_ACTIVE_ARCH=YES \
             EXCLUDED_ARCHS=x86_64 \
             2>&1 | tee /tmp/xcodebuild_logs/simulator_build.log
 
-      - name: Show build errors with context
+      - name: Show build diagnostics
         script: |
-          echo "=== SWIFT / XCODE ERRORS WITH CONTEXT ==="
-          grep -n -C 3 " error:" /tmp/xcodebuild_logs/simulator_build.log || true
-          echo "=== END ==="
+          echo "=== GREP: error ==="
+          grep -ni -C 5 "error" /tmp/xcodebuild_logs/simulator_build.log || true
+
+          echo "=== GREP: warning ==="
+          grep -ni -C 3 "warning" /tmp/xcodebuild_logs/simulator_build.log || true
+
+          echo "=== GREP: failed ==="
+          grep -ni -C 5 "failed" /tmp/xcodebuild_logs/simulator_build.log || true
+
+          echo "=== LAST 300 LINES ==="
+          tail -n 300 /tmp/xcodebuild_logs/simulator_build.log || true
 
       - name: Collect simulator .app
         script: |
@@ -57,4 +66,5 @@ workflows:
     artifacts:
       - simulator_artifacts/*.app
       - /tmp/xcodebuild_logs/*.log
+      - /tmp/xcodebuild_logs/*.xcresult
       - $CM_BUILD_DIR/DerivedData/**/Build/**/*.dSYM
