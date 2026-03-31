@@ -3,7 +3,7 @@ import Foundation
 
 @MainActor
 final class WebUGateService: ObservableObject {
-    private static let productionAPIURL = URL(string: "https://lunacat.monster/api/webview-target")!
+    private static let productionAPIURL = URL(string: "")!
     private static let requestTimeout: TimeInterval = 10
 
     @Published private(set) var shouldShowWebView = false
@@ -17,7 +17,7 @@ final class WebUGateService: ObservableObject {
            !raw.isEmpty {
             return url
         }
-        return URL(string: "http://127.0.0.1:8000/api/webview-target")!
+        return URL(string: "https://lunacat.monster/api/webview-target")!
         #else
         return productionAPIURL
         #endif
