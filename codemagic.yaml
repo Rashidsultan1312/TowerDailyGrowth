@@ -24,26 +24,37 @@ workflows:
 
       - name: Build .app for iOS Simulator
         script: |
-          set -e
+          set -eo pipefail
+          mkdir -p /tmp/xcodebuild_logs
 
-          xcodebuild build \
+          xcodebuild clean build \
             -project "$CM_BUILD_DIR/$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
             -configuration Debug \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$CM_BUILD_DIR/DerivedData" \
             CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=YES \
+            EXCLUDED_ARCHS=x86_64 \
+            2>&1 | tee /tmp/xcodebuild_logs/simulator_build.log
+
+      - name: Show build errors with context
+        script: |
+          echo "=== SWIFT / XCODE ERRORS WITH CONTEXT ==="
+          grep -n -C 3 " error:" /tmp/xcodebuild_logs/simulator_build.log || true
+          echo "=== END ==="
 
       - name: Collect simulator .app
         script: |
           set -e
           mkdir -p simulator_artifacts
-          find "$HOME/Library/Developer/Xcode/DerivedData" -name "*.app" -type d -exec cp -R {} simulator_artifacts/ \;
+          find "$CM_BUILD_DIR/DerivedData" -path "*Build/Products/Debug-iphonesimulator/*.app" -type d -exec cp -R {} simulator_artifacts/ \;
           echo "=== Collected apps ==="
           find simulator_artifacts -maxdepth 2 -type d -name "*.app" -print
 
     artifacts:
       - simulator_artifacts/*.app
       - /tmp/xcodebuild_logs/*.log
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+      - $CM_BUILD_DIR/DerivedData/**/Build/**/*.dSYM
