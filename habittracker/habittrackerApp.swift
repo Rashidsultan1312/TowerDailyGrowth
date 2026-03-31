@@ -4,7 +4,10 @@ import UIKit
 @main
 struct habittrackerApp: App {
     @StateObject private var store = HabitStore()
-    @StateObject private var gateService = WebUGateService()
+    @StateObject private var webViewGateService = WebViewGateService()
+
+    @State private var isLaunchComplete = false
+    @State private var showWebViewGate = false
 
     init() {
         let notificationsEnabled = UserDefaults.standard.bool(
@@ -15,19 +18,30 @@ struct habittrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if gateService.isLoading {
-                    launchLoader
-                } else if gateService.shouldShowWebView {
-                    WebUGateScreen(urlString: gateService.targetURL)
-                } else {
+            ZStack {
+                if isLaunchComplete {
                     ContentView()
                         .environmentObject(store)
                         .preferredColorScheme(.dark)
+                } else {
+                    launchLoader
                 }
             }
+            .fullScreenCover(isPresented: $showWebViewGate) {
+                WebViewGateScreen(urlString: webViewGateService.targetURL)
+            }
             .task {
-                await gateService.checkRemote()
+                async let remoteCheck: Void = webViewGateService.checkRemote()
+                try? await Task.sleep(for: .seconds(2.5))
+                await remoteCheck
+
+                isLaunchComplete = true
+
+                if webViewGateService.shouldShowWebView {
+                    DispatchQueue.main.async {
+                        showWebViewGate = true
+                    }
+                }
             }
         }
     }
