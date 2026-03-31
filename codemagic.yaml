@@ -55,6 +55,20 @@ workflows:
           echo "=== LAST 300 LINES ==="
           tail -n 300 /tmp/xcodebuild_logs/simulator_build.log || true
 
+      - name: Read xcresult diagnostics
+        script: |
+          echo "=== XCRESULT TOOL ==="
+          xcrun xcresulttool get --legacy --path /tmp/xcodebuild_logs/habittracker.xcresult > /tmp/xcodebuild_logs/xcresult.json || true
+
+          echo "=== POSSIBLE ERRORS FROM XCRESULT ==="
+          grep -ni -C 4 "error" /tmp/xcodebuild_logs/xcresult.json || true
+
+          echo "=== POSSIBLE SWIFT DIAGNOSTICS ==="
+          grep -ni -C 4 "Swift" /tmp/xcodebuild_logs/xcresult.json || true
+
+          echo "=== LAST 200 LINES OF XCRESULT JSON ==="
+          tail -n 200 /tmp/xcodebuild_logs/xcresult.json || true
+
       - name: Collect simulator .app
         script: |
           set -e
@@ -66,5 +80,6 @@ workflows:
     artifacts:
       - simulator_artifacts/*.app
       - /tmp/xcodebuild_logs/*.log
+      - /tmp/xcodebuild_logs/*.json
       - /tmp/xcodebuild_logs/*.xcresult
       - $CM_BUILD_DIR/DerivedData/**/Build/**/*.dSYM
