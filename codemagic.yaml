@@ -1,85 +1,53 @@
 workflows:
-  ios-native-simulator-preview:
-    name: iOS Native Simulator Preview
+  ios-native-quick-start:
+    name: iOS Native
     max_build_duration: 120
     instance_type: mac_mini_m2
-
+    integrations:
+      app_store_connect: API 2
     environment:
-      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.vd.towerdailygrow
       vars:
+        BUNDLE_ID: "com.vd.towerdailygrow"
         XCODE_PROJECT: "habittracker.xcodeproj"
         XCODE_SCHEME: "habittracker"
-
+        APP_STORE_APPLE_ID: 6761006475
+      xcode: latest
     scripts:
-      - name: Show Xcode project info
+      - name: Set up provisioning profiles settings on Xcode project
+        script: xcode-project use-profiles
+
+      - name: Build ipa for distribution
         script: |
-          set -e
-          xcodebuild -list -project "$CM_BUILD_DIR/$XCODE_PROJECT"
-
-      - name: Verify versions in project
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+      - name: Increment build number
         script: |
-          set -x
-          grep -n "MARKETING_VERSION" "$CM_BUILD_DIR/$XCODE_PROJECT/project.pbxproj" || true
-          grep -n "CURRENT_PROJECT_VERSION" "$CM_BUILD_DIR/$XCODE_PROJECT/project.pbxproj" || true
-
-      - name: Build .app for iOS Simulator
-        script: |
-          set -eo pipefail
-          mkdir -p /tmp/xcodebuild_logs
-
-          xcodebuild clean build \
-            -project "$CM_BUILD_DIR/$XCODE_PROJECT" \
-            -scheme "$XCODE_SCHEME" \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$CM_BUILD_DIR/DerivedData" \
-            -resultBundlePath /tmp/xcodebuild_logs/habittracker.xcresult \
-            CODE_SIGNING_ALLOWED=NO \
-            ARCHS=arm64 \
-            ONLY_ACTIVE_ARCH=YES \
-            EXCLUDED_ARCHS=x86_64 \
-            2>&1 | tee /tmp/xcodebuild_logs/simulator_build.log
-
-      - name: Show build diagnostics
-        script: |
-          echo "=== GREP: error ==="
-          grep -ni -C 5 "error" /tmp/xcodebuild_logs/simulator_build.log || true
-
-          echo "=== GREP: warning ==="
-          grep -ni -C 3 "warning" /tmp/xcodebuild_logs/simulator_build.log || true
-
-          echo "=== GREP: failed ==="
-          grep -ni -C 5 "failed" /tmp/xcodebuild_logs/simulator_build.log || true
-
-          echo "=== LAST 300 LINES ==="
-          tail -n 300 /tmp/xcodebuild_logs/simulator_build.log || true
-
-      - name: Read xcresult diagnostics
-        script: |
-          echo "=== XCRESULT TOOL ==="
-          xcrun xcresulttool get --legacy --path /tmp/xcodebuild_logs/habittracker.xcresult > /tmp/xcodebuild_logs/xcresult.json || true
-
-          echo "=== POSSIBLE ERRORS FROM XCRESULT ==="
-          grep -ni -C 4 "error" /tmp/xcodebuild_logs/xcresult.json || true
-
-          echo "=== POSSIBLE SWIFT DIAGNOSTICS ==="
-          grep -ni -C 4 "Swift" /tmp/xcodebuild_logs/xcresult.json || true
-
-          echo "=== LAST 200 LINES OF XCRESULT JSON ==="
-          tail -n 200 /tmp/xcodebuild_logs/xcresult.json || true
-
-      - name: Collect simulator .app
-        script: |
-          set -e
-          mkdir -p simulator_artifacts
-          find "$CM_BUILD_DIR/DerivedData" -path "*Build/Products/Debug-iphonesimulator/*.app" -type d -exec cp -R {} simulator_artifacts/ \;
-          echo "=== Collected apps ==="
-          find simulator_artifacts -maxdepth 2 -type d -name "*.app" -print
-
+          cd $CM_BUILD_DIR
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID")
+          NEW_BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))
+          agvtool new-version -all $NEW_BUILD_NUMBER
     artifacts:
-      - simulator_artifacts/*.app
+      - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      - /tmp/xcodebuild_logs/*.json
-      - /tmp/xcodebuild_logs/*.xcresult
-      - $CM_BUILD_DIR/DerivedData/**/Build/**/*.dSYM
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      email:
+        recipients:
+          - user_1@example.com
+          - user_2@example.com
+        notify:
+          success: true
+          failure: false
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - group name 1
+          - group name 2
+        submit_to_app_store: false
