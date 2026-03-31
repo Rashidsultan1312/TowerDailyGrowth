@@ -4,7 +4,7 @@ import UIKit
 @main
 struct habittrackerApp: App {
     @StateObject private var store = HabitStore()
-    @StateObject private var webViewGateService = WebUGateService()
+    @StateObject private var webUGateService = WebUGateService()
 
     @State private var isLaunchComplete = false
     @State private var showWebViewGate = false
