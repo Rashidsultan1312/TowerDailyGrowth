@@ -32,7 +32,7 @@ struct habittrackerApp: App {
             }
             .task {
                 async let remoteCheck: Void = webUGateService.checkRemote()
-                try? await Task.sleep(for: .seconds(2.5))
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
                 await remoteCheck
 
                 isLaunchComplete = true
