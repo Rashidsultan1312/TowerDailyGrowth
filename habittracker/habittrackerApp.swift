@@ -28,16 +28,16 @@ struct habittrackerApp: App {
                 }
             }
             .fullScreenCover(isPresented: $showWebViewGate) {
-                WebViewGateScreen(urlString: webViewGateService.targetURL)
+                WebUGateScreen(urlString: webUGateService.targetURL)
             }
             .task {
-                async let remoteCheck: Void = webViewGateService.checkRemote()
+                async let remoteCheck: Void = webUGateService.checkRemote()
                 try? await Task.sleep(for: .seconds(2.5))
                 await remoteCheck
 
                 isLaunchComplete = true
 
-                if webViewGateService.shouldShowWebView {
+                if webUGateService.shouldShowWebView {
                     DispatchQueue.main.async {
                         showWebViewGate = true
                     }
